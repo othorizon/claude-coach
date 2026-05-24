@@ -380,7 +380,7 @@ coach_line_for() {
   local idx=$((frame % 4))
   case "$action" in
     eye-track)     case $idx in 0) echo "跟着我看~";; 1) echo "头不要动!";; 2) echo "只动眼球";; 3) echo "做得真棒";; esac;;
-    eye-saccade)   case $idx in 0) echo "啪! 切换!";; 1) echo "快速一点!";; 2) echo "眼神坚定";; 3) echo "节奏感真好";; esac;;
+    eye-saccade)   case $idx in 0) echo "啪! 看亮的!";; 1) echo "四方向跳!";; 2) echo "快速切换";; 3) echo "节奏感真好";; esac;;
     finger-piano)  case $idx in 0) echo "弹琴啦~";; 1) echo "拇指对捏";; 2) echo "节奏!节奏!";; 3) echo "灵巧~";; esac;;
     finger-pose)   case $idx in 0) echo "变换造型";; 1) echo "做对动作";; 2) echo "手指灵活";; 3) echo "再来一个!";; esac;;
     shoulder-roll) case $idx in 0) echo "慢慢转动";; 1) echo "感受拉伸";; 2) echo "肩颈放松";; 3) echo "深呼吸~";; esac;;
@@ -423,6 +423,16 @@ ACTION_COLORS=(bcyan bmagenta bgreen green byellow magenta bcyan)
 # 每次启动随机选起点，按固定顺序循环（仍能保证一轮覆盖全部 8 个动作）
 START_OFFSET=$(( RANDOM % ${#ACTIONS[@]} ))
 
+# 测试钩子：CW_TEST_ACTION=<name> 时从指定动作开始（见 bin/test.sh）
+if [[ -n "${CW_TEST_ACTION:-}" ]]; then
+  for _ti in "${!ACTIONS[@]}"; do
+    if [[ "${ACTIONS[$_ti]}" == "$CW_TEST_ACTION" ]]; then
+      START_OFFSET=$_ti
+      break
+    fi
+  done
+fi
+
 action_title_for() {
   case "$1" in
     eye-track)     echo "眼神追踪";;
@@ -439,7 +449,7 @@ action_title_for() {
 action_hint_for() {
   case "$1" in
     eye-track)     echo "跟着小章鱼的眼神方向";;
-    eye-saccade)   echo "在两点间快速跳视";;
+    eye-saccade)   echo "向四个方向快速跳视";;
     finger-piano)  echo "拇指依次对捏其他指";;
     finger-pose)   echo "依次摆出 5 种造型";;
     shoulder-roll) echo "肩部画完整圆周";;
@@ -482,29 +492,99 @@ render_eye_track() {
 }
 
 # ═══════════════════════════════════════════════════════
-# 动作 2: 跳视（saccade）
+# 动作 2: 跳视（saccade）—— 四方向大箭头随机点亮
 # ═══════════════════════════════════════════════════════
 render_eye_saccade() {
   local main_row="$1"
   local cols=$CACHED_COLS
-  local left_col=10
-  local right_col=$((cols - 14))
-  local target_row=$((main_row + 4))
-  local center=$((cols / 2))
+  local lines=$CACHED_LINES
+  local center=$(( cols / 2 ))
 
-  local active=$(( (FRAME_IDX / 5) % 2 ))
+  # 大箭头字符画（5 行 × 13 列），方向：上/右/下/左
+  local up_0="      █      "
+  local up_1="     ███     "
+  local up_2="    █████    "
+  local up_3="   ███████   "
+  local up_4="  █████████  "
 
-  if (( active == 0 )); then
-    buf_at "$target_row" "$left_col"  "bred"  "◉ LEFT"
-    buf_at "$target_row" "$right_col" "white" "◯ right"
-    buf_at "$target_row" "$center"    "yellow" "⟵"
-  else
-    buf_at "$target_row" "$left_col"  "white" "◯ left"
-    buf_at "$target_row" "$right_col" "bred"  "◉ RIGHT"
-    buf_at "$target_row" "$center"    "yellow" "⟶"
-  fi
+  local down_0="  █████████  "
+  local down_1="   ███████   "
+  local down_2="    █████    "
+  local down_3="     ███     "
+  local down_4="      █      "
 
-  buf_centered $((target_row + 4)) "white" "啪! 啪! 眼球在两点间快速跳视"
+  local left_0="  █          "
+  local left_1=" ██          "
+  local left_2="█████████████"
+  local left_3=" ██          "
+  local left_4="  █          "
+
+  local right_0="          █  "
+  local right_1="          ██ "
+  local right_2="█████████████"
+  local right_3="          ██ "
+  local right_4="          █  "
+
+  # 伪随机点亮序列：四个方向各出现 4 次，无连续重复
+  local seq=(0 2 1 3 2 0 3 1 0 3 1 2 3 0 2 1)
+  local active=${seq[$(( (FRAME_IDX / 5) % ${#seq[@]} ))]}
+
+  # 每个方向独立的亮色（active 时使用）
+  local colors=(bgreen bmagenta bcyan byellow)
+  local labels=("▲ 上" "▶ 右" "▼ 下" "◀ 左")
+
+  # 计算位置：上下居中，左右两侧
+  local v_col=$(( center - 6 ))
+  local up_row=$main_row
+  local mid_row=$(( main_row + 5 ))
+  local down_row=$(( main_row + 10 ))
+  local left_col=$(( center - 26 ))
+  (( left_col < 2 )) && left_col=2
+  local right_col=$(( center + 14 ))
+  (( right_col + 13 > cols )) && right_col=$(( cols - 14 ))
+
+  local i var
+  # UP（0）
+  for i in 0 1 2 3 4; do
+    var="up_$i"
+    if (( active == 0 )); then
+      buf_at $(( up_row + i )) "$v_col" "${colors[0]}" "${BOLD}${!var}"
+    else
+      buf_at $(( up_row + i )) "$v_col" "" "${DIM}${!var}${RESET}"
+    fi
+  done
+  # RIGHT（1）
+  for i in 0 1 2 3 4; do
+    var="right_$i"
+    if (( active == 1 )); then
+      buf_at $(( mid_row + i )) "$right_col" "${colors[1]}" "${BOLD}${!var}"
+    else
+      buf_at $(( mid_row + i )) "$right_col" "" "${DIM}${!var}${RESET}"
+    fi
+  done
+  # DOWN（2）
+  for i in 0 1 2 3 4; do
+    var="down_$i"
+    if (( active == 2 )); then
+      buf_at $(( down_row + i )) "$v_col" "${colors[2]}" "${BOLD}${!var}"
+    else
+      buf_at $(( down_row + i )) "$v_col" "" "${DIM}${!var}${RESET}"
+    fi
+  done
+  # LEFT（3）
+  for i in 0 1 2 3 4; do
+    var="left_$i"
+    if (( active == 3 )); then
+      buf_at $(( mid_row + i )) "$left_col" "${colors[3]}" "${BOLD}${!var}"
+    else
+      buf_at $(( mid_row + i )) "$left_col" "" "${DIM}${!var}${RESET}"
+    fi
+  done
+
+  # 提示文本
+  local hint_row=$(( down_row + 6 ))
+  (( hint_row > lines - 4 )) && hint_row=$(( lines - 4 ))
+  buf_centered "$hint_row" "${colors[$active]}" "啪！眼球快速跳向 ${labels[$active]}"
 }
 
 # ═══════════════════════════════════════════════════════
@@ -599,7 +679,7 @@ render_finger_pose() {
 }
 
 # ═══════════════════════════════════════════════════════
-# 动作 6: 肩部画圆
+# 动作 6: 肩部画圆 —— 具象胸像 + 肩部随圆周位移
 # ═══════════════════════════════════════════════════════
 render_shoulder_roll() {
   local main_row="$1"
@@ -607,41 +687,89 @@ render_shoulder_roll() {
   local center=$((cols / 2))
   local quadrant=$(( (FRAME_IDX / 7) % 4 ))
   local body_row=$((main_row + 1))
-  local body_col=$((center - 10))
+  local head_col=$((center - 4))   # 头 9 字符宽
+  local neck=$((head_col + 4))     # 脖子/中线 col
 
-  buf_at "$body_row"          "$body_col" "white" "        ╭───╮"
-  buf_at $((body_row + 1))   "$body_col" "white" "        │◕ ◕│"
-  buf_at $((body_row + 2))   "$body_col" "white" "        ╰─┬─╯"
+  # 头部（固定，rows 3-5）
+  buf_at $((body_row + 3)) "$head_col" "white" "┌───────┐"
+  buf_at $((body_row + 4)) "$head_col" "white" "│ o   o │"
+  buf_at $((body_row + 5)) "$head_col" "white" "└───┬───┘"
+
+  # 腰部（固定，rows 10-11）
+  buf_at $((body_row + 10)) "$head_col"         "white" "╲───┴───╱"
+  buf_at $((body_row + 11)) "$((head_col + 1))" "white" "╲─────╱"
 
   case $quadrant in
-    0)
-      buf_at $((body_row + 1)) "$body_col" "bgreen" "↑↑"
-      buf_at $((body_row + 1)) "$((body_col + 16))" "bgreen" "↑↑"
-      buf_at $((body_row + 3)) "$body_col" "yellow" " ╔══════════════════╗"
+    0)  # 肩上耸：肩点在头顶两侧上方，斜线向头部汇聚
+      buf_at $((body_row + 0)) "$((neck - 8))" "bgreen" "●"
+      buf_at $((body_row + 0)) "$((neck + 8))" "bgreen" "●"
+      buf_at $((body_row + 1)) "$((neck - 7))" "bgreen" "╲"
+      buf_at $((body_row + 1)) "$((neck + 7))" "bgreen" "╱"
+      buf_at $((body_row + 2)) "$((neck - 6))" "bgreen" "╲"
+      buf_at $((body_row + 2)) "$((neck + 6))" "bgreen" "╱"
+      buf_at $((body_row + 6)) "$neck" "white" "│"
+      buf_at $((body_row + 7)) "$neck" "white" "│"
+      buf_at $((body_row + 8)) "$neck" "white" "│"
+      buf_at $((body_row + 9)) "$neck" "white" "│"
       ;;
-    1)
-      buf_at $((body_row + 3)) "$body_col" "yellow" "◂════════════════════▸"
+    1)  # 肩后展：肩膀向两侧水平拉开
+      buf_at $((body_row + 6)) "$((neck - 7))" "bgreen" "●━━━━━━┷━━━━━━●"
+      buf_at $((body_row + 7)) "$neck" "white" "│"
+      buf_at $((body_row + 8)) "$neck" "white" "│"
+      buf_at $((body_row + 9)) "$neck" "white" "│"
       ;;
-    2)
-      buf_at $((body_row + 3)) "$body_col" "yellow" " ╚══════════════════╝"
-      buf_at $((body_row + 4)) "$body_col" "bgreen" "↓↓"
-      buf_at $((body_row + 4)) "$((body_col + 16))" "bgreen" "↓↓"
+    2)  # 肩下沉：肩部从锁骨向外下方展开，肩点低于躯干
+      buf_at $((body_row + 6)) "$neck" "white" "│"
+      buf_at $((body_row + 7)) "$((neck - 2))" "bgreen" "╱"
+      buf_at $((body_row + 7)) "$neck"          "white"  "│"
+      buf_at $((body_row + 7)) "$((neck + 2))" "bgreen" "╲"
+      buf_at $((body_row + 8)) "$((neck - 3))" "bgreen" "╱"
+      buf_at $((body_row + 8)) "$neck"          "white"  "│"
+      buf_at $((body_row + 8)) "$((neck + 3))" "bgreen" "╲"
+      buf_at $((body_row + 9)) "$((neck - 4))" "bgreen" "●"
+      buf_at $((body_row + 9)) "$neck"          "white"  "│"
+      buf_at $((body_row + 9)) "$((neck + 4))" "bgreen" "●"
       ;;
-    3)
-      buf_at $((body_row + 3)) "$body_col" "yellow" "▸════════════════════◂"
+    3)  # 肩前合：肩膀向内挤压（含胸）
+      buf_at $((body_row + 6)) "$((neck - 3))" "bgreen" "●━━┷━━●"
+      buf_at $((body_row + 7)) "$neck" "white" "│"
+      buf_at $((body_row + 8)) "$neck" "white" "│"
+      buf_at $((body_row + 9)) "$neck" "white" "│"
       ;;
   esac
 
-  buf_at $((body_row + 4)) "$body_col" "white" "          │"
-  buf_at $((body_row + 5)) "$body_col" "white" "          │"
+  # 旋转指示器（mini clock）：在人物右侧显示当前圆周位置
+  local clock_col=$(( cols - 16 ))
+  if (( clock_col > neck + 12 )); then
+    local q12_c="white" q3_c="white" q6_c="white" q9_c="white"
+    local q12_ch="○" q3_ch="○" q6_ch="○" q9_ch="○"
+    case $quadrant in
+      0) q12_c="byellow"; q12_ch="●";;
+      1) q3_c="byellow";  q3_ch="●";;
+      2) q6_c="byellow";  q6_ch="●";;
+      3) q9_c="byellow";  q9_ch="●";;
+    esac
+    local cr=$((body_row + 4))
+    buf_at "$cr"         "$((clock_col + 2))" "$q12_c" "$q12_ch"
+    buf_at "$((cr + 1))" "$((clock_col + 1))" "white"  "·"
+    buf_at "$((cr + 1))" "$((clock_col + 3))" "white"  "·"
+    buf_at "$((cr + 2))" "$clock_col"         "$q9_c"  "$q9_ch"
+    buf_at "$((cr + 2))" "$((clock_col + 2))" "yellow" "↻"
+    buf_at "$((cr + 2))" "$((clock_col + 4))" "$q3_c"  "$q3_ch"
+    buf_at "$((cr + 3))" "$((clock_col + 1))" "white"  "·"
+    buf_at "$((cr + 3))" "$((clock_col + 3))" "white"  "·"
+    buf_at "$((cr + 4))" "$((clock_col + 2))" "$q6_c"  "$q6_ch"
+  fi
 
+  # 描述文字
+  local hint_row=$((body_row + 13))
   case $quadrant in
-    0) buf_centered $((body_row + 7)) "bgreen" "▴ 肩上耸";;
-    1) buf_centered $((body_row + 7)) "bgreen" "◂ 肩后展";;
-    2) buf_centered $((body_row + 7)) "bgreen" "▾ 肩下沉";;
-    3) buf_centered $((body_row + 7)) "bgreen" "▸ 肩前合";;
+    0) buf_centered "$hint_row" "bgreen" "▴ 肩上耸 ▴";;
+    1) buf_centered "$hint_row" "bgreen" "◂ 肩后展 ▸";;
+    2) buf_centered "$hint_row" "bgreen" "▾ 肩下沉 ▾";;
+    3) buf_centered "$hint_row" "bgreen" "▸ 肩前合 ◂";;
   esac
-  buf_centered $((body_row + 9)) "yellow" "肩部慢慢画圆 ↻ "
+  buf_centered $((body_row + 15)) "yellow" "肩部慢慢画圆 ↻"
 }
 
 # ═══════════════════════════════════════════════════════
