@@ -277,82 +277,110 @@ render_sprite_pose() {
   done
 }
 
-# 四个姿势的像素数据（14 宽 × 14 高 = 渲染为 14 字符 × 7 行）
-# . = 透明  p = 深粉  P = 浅粉  E = 眼睛  e = 闭眼睫毛  h = 高光
-POSE_FORWARD='..............
-....pppppp....
-...pPPPPPPp...
-..pPPPPPPPPp..
-.pPPPPPPPPPPp.
-.pPPEEPPEEPPp.
-.pPPEhPPEhPPp.
-.pPPPPPPPPPPp.
-.pPPPPPPPPPPp.
-.pPPPPPPPPPPp.
-..pPPPPPPPPp..
-...pp.pp.pp...
-...p..p..p....
-...p..p..p....'
+# 新角色设计：方块头 + 3×3 白色眼眶 + 1 像素深色眼珠
+# 14 宽 × 12 高 = 14 字符 × 6 行；眼珠在眼眶里移动表示眼神方向
+# . = 透明  p = 深粉  P = 浅粉  W = 白色眼眶  E = 黑色眼珠  e = 闭眼睫毛
 
-POSE_BLINK='..............
-....pppppp....
-...pPPPPPPp...
+# CENTER: 眼珠在眼眶正中
+POSE_CENTER='...pppppppp...
+..pPPPPPPPPPP.
+.pPPPPPPPPPPPp
+pPPPPPPPPPPPPp
+pPPWWWPPWWWPPp
+pPPWEWPPWEWPPp
+pPPWWWPPWWWPPp
+pPPPPPPPPPPPPp
+.pPPPPPPPPPPp.
 ..pPPPPPPPPp..
-.pPPPPPPPPPPp.
-.pPPPPPPPPPPp.
-.pPPeePPeePPp.
-.pPPPPPPPPPPp.
-.pPPPPPPPPPPp.
-.pPPPPPPPPPPp.
-..pPPPPPPPPp..
-...pp.pp.pp...
-...p..p..p....
-...p..p..p....'
+.pp..pp..pp..p
+.pp..pp..pp..p'
 
-POSE_RIGHT='..............
-....pppppp....
-...pPPPPPPp...
+# UP: 眼珠在眼眶顶部
+POSE_UP='...pppppppp...
+..pPPPPPPPPPP.
+.pPPPPPPPPPPPp
+pPPPPPPPPPPPPp
+pPPWEWPPWEWPPp
+pPPWWWPPWWWPPp
+pPPWWWPPWWWPPp
+pPPPPPPPPPPPPp
+.pPPPPPPPPPPp.
 ..pPPPPPPPPp..
-.pPPPPPPPPPPp.
-.pPPPEEPPEEPp.
-.pPPPEhPPEhPp.
-.pPPPPPPPPPPp.
-.pPPPPPPPPPPp.
-.pPPPPPPPPPPp.
-..pPPPPPPPPp..
-...pp.pp.pp...
-...p..p..p....
-...p..p..p....'
+.pp..pp..pp..p
+.pp..pp..pp..p'
 
-POSE_SMILE='..............
-....pppppp....
-...pPPPPPPp...
+# DOWN: 眼珠在眼眶底部
+POSE_DOWN='...pppppppp...
+..pPPPPPPPPPP.
+.pPPPPPPPPPPPp
+pPPPPPPPPPPPPp
+pPPWWWPPWWWPPp
+pPPWWWPPWWWPPp
+pPPWEWPPWEWPPp
+pPPPPPPPPPPPPp
+.pPPPPPPPPPPp.
 ..pPPPPPPPPp..
-.pPPeePPeePPp.
-.pPPPPPPPPPPp.
-.pPPPPPPPPPPp.
-.pPPPPPPPPPPp.
-.pPPPeeeePPPp.
+.pp..pp..pp..p
+.pp..pp..pp..p'
+
+# LEFT: 眼珠在眼眶左侧
+POSE_LEFT='...pppppppp...
+..pPPPPPPPPPP.
+.pPPPPPPPPPPPp
+pPPPPPPPPPPPPp
+pPPWWWPPWWWPPp
+pPPEWWPPEWWPPp
+pPPWWWPPWWWPPp
+pPPPPPPPPPPPPp
 .pPPPPPPPPPPp.
 ..pPPPPPPPPp..
-...pp.pp.pp...
-...p..p..p....
-...p..p..p....'
+.pp..pp..pp..p
+.pp..pp..pp..p'
 
-build_sprite forward "$POSE_FORWARD"
-build_sprite blink   "$POSE_BLINK"
-build_sprite right   "$POSE_RIGHT"
-build_sprite smile   "$POSE_SMILE"
+# RIGHT: 眼珠在眼眶右侧
+POSE_RIGHT='...pppppppp...
+..pPPPPPPPPPP.
+.pPPPPPPPPPPPp
+pPPPPPPPPPPPPp
+pPPWWWPPWWWPPp
+pPPWWEPPWWEPPp
+pPPWWWPPWWWPPp
+pPPPPPPPPPPPPp
+.pPPPPPPPPPPp.
+..pPPPPPPPPp..
+.pp..pp..pp..p
+.pp..pp..pp..p'
 
-POSE_NAMES=(forward blink right smile)
+# BLINK: 眼睛眯起（笑脸用，coach 偶尔切到）
+POSE_BLINK='...pppppppp...
+..pPPPPPPPPPP.
+.pPPPPPPPPPPPp
+pPPPPPPPPPPPPp
+pPPPPPPPPPPPPp
+pPPeeePPeeePPp
+pPPPPPPPPPPPPp
+pPPPPPPPPPPPPp
+.pPPPPPPPPPPp.
+..pPPPPPPPPp..
+.pp..pp..pp..p
+.pp..pp..pp..p'
+
+build_sprite center "$POSE_CENTER"
+build_sprite up     "$POSE_UP"
+build_sprite down   "$POSE_DOWN"
+build_sprite left   "$POSE_LEFT"
+build_sprite right  "$POSE_RIGHT"
+build_sprite blink  "$POSE_BLINK"
+
+# coach 用的姿势轮换（center 多点，搭配偶尔眨眼）
+COACH_POSE_CYCLE=(center center blink center right center left center)
 
 coach_line_for() {
   local action="$1" frame="$2"
   local idx=$((frame % 4))
   case "$action" in
-    eye-pursuit)   case $idx in 0) echo "眼睛跟着球~";; 1) echo "脖子别动!";; 2) echo "只动眼球";; 3) echo "做得真棒";; esac;;
+    eye-track)     case $idx in 0) echo "跟着我看~";; 1) echo "头不要动!";; 2) echo "只动眼球";; 3) echo "做得真棒";; esac;;
     eye-saccade)   case $idx in 0) echo "啪! 切换!";; 1) echo "快速一点!";; 2) echo "眼神坚定";; 3) echo "节奏感真好";; esac;;
-    eye-focus)     case $idx in 0) echo "看远处~";; 1) echo "现在看近!";; 2) echo "感受聚焦";; 3) echo "睫状肌在练";; esac;;
     finger-piano)  case $idx in 0) echo "弹琴啦~";; 1) echo "拇指对捏";; 2) echo "节奏!节奏!";; 3) echo "灵巧~";; esac;;
     finger-pose)   case $idx in 0) echo "变换造型";; 1) echo "做对动作";; 2) echo "手指灵活";; 3) echo "再来一个!";; esac;;
     shoulder-roll) case $idx in 0) echo "慢慢转动";; 1) echo "感受拉伸";; 2) echo "肩颈放松";; 3) echo "深呼吸~";; esac;;
@@ -363,41 +391,42 @@ coach_line_for() {
 }
 
 draw_coach() {
-  local start_col="$1" start_row="$2" action="$3" frame="$4"
+  local sprite_col="$1" sprite_row="$2" action="$3" frame="$4"
 
-  # 像素角色：4 个姿势按帧轮换（每姿势约 1.6 秒 = 8 帧）
-  local pose_idx=$(( (frame / 8) % ${#POSE_NAMES[@]} ))
-  local pose="${POSE_NAMES[$pose_idx]}"
-  render_sprite_pose "$pose" "$start_row" "$start_col"
+  # 像素角色：每 8 帧（1.6 秒）切一姿势
+  local pose_idx=$(( (frame / 8) % ${#COACH_POSE_CYCLE[@]} ))
+  local pose="${COACH_POSE_CYCLE[$pose_idx]}"
+  render_sprite_pose "$pose" "$sprite_row" "$sprite_col"
 
-  # 语音泡泡：在角色右侧（角色 14 列 + 2 列间隙 = 起始列 +16）
+  # 语音泡泡：在角色上方，气泡尾巴 ▽ 指向角色
   local line_text
   line_text=$(coach_line_for "$action" "$((frame / 12))")
-  local b_row=$((start_row + 2))
-  local b_col=$((start_col + 16))
+  local b_row=$((sprite_row - 5))
+  local b_col=$((sprite_col - 4))
+  (( b_row < 1 )) && b_row=1
+  (( b_col < 1 )) && b_col=1
   buf_at "$b_row"          "$b_col" "bcyan" "╭──────────────╮"
   buf_at $((b_row + 1))    "$b_col" "bcyan" "│"
   buf_at $((b_row + 1))    "$((b_col + 2))" "bcyan" "${BOLD}${line_text}"
   buf_at $((b_row + 1))    "$((b_col + 15))" "bcyan" "│"
-  buf_at $((b_row + 2))    "$b_col" "bcyan" "╰──┬───────────╯"
-  buf_at $((b_row + 3))    "$b_col" "bcyan" "   ▽"
+  buf_at $((b_row + 2))    "$b_col" "bcyan" "╰────┬─────────╯"
+  buf_at $((b_row + 3))    "$((b_col + 5))" "bcyan" "▽"
 }
 
 # ═══════════════════════════════════════════════════════
 # 动作元数据 + 随机起点
 # ═══════════════════════════════════════════════════════
-ACTIONS=(eye-pursuit eye-saccade eye-focus finger-piano finger-pose shoulder-roll neck-side breath-box)
-ACTION_DURATIONS=(60 20 20 40 30 30 40 32)
-ACTION_COLORS=(bcyan bmagenta bblue bgreen green byellow magenta bcyan)
+ACTIONS=(eye-track eye-saccade finger-piano finger-pose shoulder-roll neck-side breath-box)
+ACTION_DURATIONS=(60 20 40 30 30 40 32)
+ACTION_COLORS=(bcyan bmagenta bgreen green byellow magenta bcyan)
 
 # 每次启动随机选起点，按固定顺序循环（仍能保证一轮覆盖全部 8 个动作）
 START_OFFSET=$(( RANDOM % ${#ACTIONS[@]} ))
 
 action_title_for() {
   case "$1" in
-    eye-pursuit)   echo "平滑追踪眼动";;
+    eye-track)     echo "眼神追踪";;
     eye-saccade)   echo "跳视训练";;
-    eye-focus)     echo "远近调焦";;
     finger-piano)  echo "手指钢琴";;
     finger-pose)   echo "手势造型";;
     shoulder-roll) echo "肩部画圆";;
@@ -409,9 +438,8 @@ action_title_for() {
 
 action_hint_for() {
   case "$1" in
-    eye-pursuit)   echo "眼睛跟球，头不动";;
+    eye-track)     echo "跟着小章鱼的眼神方向";;
     eye-saccade)   echo "在两点间快速跳视";;
-    eye-focus)     echo "近物 ↔ 远物切换";;
     finger-piano)  echo "拇指依次对捏其他指";;
     finger-pose)   echo "依次摆出 5 种造型";;
     shoulder-roll) echo "肩部画完整圆周";;
@@ -422,41 +450,35 @@ action_hint_for() {
 }
 
 # ═══════════════════════════════════════════════════════
-# 动作 1: 平滑追踪眼动（抛球）
+# 动作 1: 眼神追踪（跟随小章鱼眼神方向）
+# 居中显示大角色，眼神按 center→up→center→right→center→down→center→left 循环
 # ═══════════════════════════════════════════════════════
-render_eye_pursuit() {
+EYE_TRACK_SEQUENCE=(center up center right center down center left)
+
+render_eye_track() {
   local main_row="$1"
   local cols=$CACHED_COLS
-  local left_col=8
-  local right_col=$((cols - 18))
-  local figure_row=$((main_row + 3))
 
-  local phase=$(( FRAME_IDX % 30 ))
-  local t100
-  if (( phase < 15 )); then
-    t100=$(( phase * 100 / 15 ))
-  else
-    t100=$(( (30 - phase) * 100 / 15 ))
-  fi
-  local ball_col=$(( left_col + 4 + (right_col - left_col - 8) * t100 / 100 ))
+  # 每 10 帧（2 秒）切一个方向
+  local pos_idx=$(( (FRAME_IDX / 10) % ${#EYE_TRACK_SEQUENCE[@]} ))
+  local current="${EYE_TRACK_SEQUENCE[$pos_idx]}"
 
-  buf_at $((figure_row - 1)) "$left_col"  "yellow" "  ◯"
-  buf_at "$figure_row"        "$left_col"  "yellow" " ╱│╲"
-  buf_at $((figure_row + 1)) "$left_col"  "yellow" "  │"
-  buf_at $((figure_row + 2)) "$left_col"  "yellow" " ╱ ╲"
+  local center_col=$(( cols / 2 ))
+  local sprite_col=$(( center_col - 7 ))
+  local sprite_row=$(( main_row + 2 ))
+  render_sprite_pose "$current" "$sprite_row" "$sprite_col"
 
-  buf_at $((figure_row - 1)) "$right_col" "yellow" "  ◯"
-  buf_at "$figure_row"        "$right_col" "yellow" " ╱│╲"
-  buf_at $((figure_row + 1)) "$right_col" "yellow" "  │"
-  buf_at $((figure_row + 2)) "$right_col" "yellow" " ╱ ╲"
+  # 方向提示在角色下方
+  local hint_row=$(( sprite_row + 8 ))
+  case "$current" in
+    center) buf_centered "$hint_row" "bgreen" "● 看小章鱼的眼睛 ●";;
+    up)     buf_centered "$hint_row" "bgreen" "▲ ▲ ▲  眼睛向上";;
+    down)   buf_centered "$hint_row" "bgreen" "▼ ▼ ▼  眼睛向下";;
+    left)   buf_centered "$hint_row" "bgreen" "◂ ◂ ◂  眼睛向左";;
+    right)  buf_centered "$hint_row" "bgreen" "眼睛向右  ▸ ▸ ▸";;
+  esac
 
-  local arc_phase=$(( (phase % 15) * 100 / 15 ))
-  local h=$(( arc_phase * (100 - arc_phase) / 25 ))
-  local ball_row=$(( figure_row - 1 - h / 30 ))
-  (( ball_row < main_row )) && ball_row=$main_row
-
-  buf_at "$ball_row" "$ball_col" "bred" "●"
-  buf_centered $((figure_row + 5)) "white" "↪ 眼睛跟着小球，头不要动 ↩"
+  buf_centered $((hint_row + 2)) "white" "▸ 头不动，眼睛跟随小章鱼的视线方向"
 }
 
 # ═══════════════════════════════════════════════════════
@@ -486,33 +508,7 @@ render_eye_saccade() {
 }
 
 # ═══════════════════════════════════════════════════════
-# 动作 3: 远近调焦
-# ═══════════════════════════════════════════════════════
-render_eye_focus() {
-  local main_row="$1"
-  local cols=$CACHED_COLS
-  local center=$((cols / 2))
-  local mode=$(( (FRAME_IDX / 15) % 2 ))
-
-  if (( mode == 0 )); then
-    buf_at $((main_row + 2)) "$((center - 5))" "bgreen" "       NEAR"
-    buf_at $((main_row + 4)) "$center" "bred" "•"
-    buf_centered $((main_row + 6)) "white" "▸ 把目光聚到这个小点上"
-  else
-    buf_at $((main_row + 1)) "$((center - 13))" "bblue" "       F A R"
-    buf_at $((main_row + 2)) "$((center - 13))" "blue"  "  ╭──────────────────╮"
-    buf_at $((main_row + 3)) "$((center - 13))" "blue"  "  │                  │"
-    buf_at $((main_row + 4)) "$((center - 13))" "blue"  "  │    ╲   /   /     │"
-    buf_at $((main_row + 5)) "$((center - 13))" "blue"  "  │     ╲ / ╲ /      │"
-    buf_at $((main_row + 6)) "$((center - 13))" "blue"  "  │      X   X       │"
-    buf_at $((main_row + 7)) "$((center - 13))" "blue"  "  │     / ╲ / ╲      │"
-    buf_at $((main_row + 8)) "$((center - 13))" "blue"  "  ╰──────────────────╯"
-    buf_centered $((main_row + 10)) "white" "▸ 望向远方山林，放松眼肌"
-  fi
-}
-
-# ═══════════════════════════════════════════════════════
-# 动作 4: 手指钢琴
+# 动作 3: 手指钢琴
 # ═══════════════════════════════════════════════════════
 render_finger_piano() {
   local main_row="$1"
@@ -737,9 +733,8 @@ render_breath_box() {
 render_dispatch() {
   local action="$1" main_row="$2"
   case "$action" in
-    eye-pursuit)   render_eye_pursuit   "$main_row";;
+    eye-track)     render_eye_track     "$main_row";;
     eye-saccade)   render_eye_saccade   "$main_row";;
-    eye-focus)     render_eye_focus     "$main_row";;
     finger-piano)  render_finger_piano  "$main_row";;
     finger-pose)   render_finger_pose   "$main_row";;
     shoulder-roll) render_shoulder_roll "$main_row";;
@@ -771,9 +766,12 @@ render_screen() {
   buf_clear_rows 3 $((lines - 4))
   render_dispatch "$action" 4
 
-  # 教练：宽度够才画（避免和主动画区重叠）
-  if (( cols >= 110 )); then
-    draw_coach $(( cols - 36 )) 5 "$action" "$FRAME_IDX"
+  # 教练：右下角（避开主动画区域）。气泡在上、▽ 指向下方角色
+  # 角色 14 宽 × 6 高，气泡 16 宽 × 4 高 + 1 行 ▽，总占 ~16 宽 × 11 高
+  if (( cols >= 110 && lines >= 22 )); then
+    local coach_sprite_col=$(( cols - 16 ))
+    local coach_sprite_row=$(( lines - 9 ))
+    draw_coach "$coach_sprite_col" "$coach_sprite_row" "$action" "$FRAME_IDX"
   fi
 
   # 大数字倒计时（仅 cols>=100 && lines>=28 才显示）
