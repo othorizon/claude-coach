@@ -1,0 +1,22 @@
+{
+  "name": "claude-coach",
+  "owner": {
+    "name": "rizon"
+  },
+  "description": "Claude 干活时弹一个动画引导你做眼保健操和健康小动作",
+  "plugins": [
+    {
+      "name": "claude-coach",
+      "source": {
+        "source": "github",
+        "repo": "othorizon/claude-coach"
+      },
+      "description": "Claude 干活时弹一个动画引导你做眼保健操和健康小动作",
+      "homepage": "https://github.com/othorizon/claude-coach",
+      "repository": "https://github.com/othorizon/claude-coach",
+      "license": "MIT",
+      "keywords": ["health", "exercise", "animation", "ergonomics", "claude-code"],
+      "category": "productivity"
+    }
+  ]
+}
