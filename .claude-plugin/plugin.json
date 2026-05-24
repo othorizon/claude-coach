@@ -1,0 +1,32 @@
+{
+  "name": "claude-coach",
+  "displayName": "Claude Coach",
+  "description": "Claude 干活时弹一个动画引导你做眼保健操和健康小动作",
+  "version": "0.1.0",
+  "author": {
+    "name": "rizon"
+  },
+  "keywords": ["health", "exercise", "animation", "ergonomics", "claude-code"],
+  "userConfig": {
+    "display_mode": {
+      "type": "string",
+      "title": "显示模式",
+      "description": "auto / tmux / popup。auto 时若处于 tmux 内则用 tmux 分屏，否则弹新窗口"
+    },
+    "tmux_size_percent": {
+      "type": "number",
+      "title": "tmux 模式动画占屏百分比",
+      "description": "默认 70。Claude 留 30%。范围 30–85"
+    },
+    "tmux_split_direction": {
+      "type": "string",
+      "title": "tmux 分屏方向",
+      "description": "h（右侧竖分屏）或 v（底部横分屏）。默认 h"
+    },
+    "popup_command": {
+      "type": "string",
+      "title": "popup 模式启动命令（高级）",
+      "description": "留空则用平台默认（macOS: osascript 开 Terminal/iTerm2）。自定义命令里用 {script} 占位真实脚本路径"
+    }
+  }
+}
