@@ -23,6 +23,7 @@ LAST_FLUSH=0
 FLUSH_INTERVAL=5
 FRAME_IDX=0
 FRAME_INTERVAL=0.2  # 5 fps
+SELF_CHECK_INTERVAL=10  # 帧数，10 帧 ≈ 2s 自检一次
 
 # ═══════════════════════════════════════════════════════
 # 颜色 / ANSI 常量
@@ -700,9 +701,11 @@ flush_stats() {
 }
 
 cleanup() {
+  local reason="${1:-signal}"
   local now=$SECONDS
   ACCUMULATED=$now
   flush_stats "$now"
+  cw_log "animation cleanup reason=$reason elapsed=${now}s"
   printf '%s%s' "$ALT_SCREEN_OFF" "$SHOW_CURSOR"
   printf '\n\n        '
   printf '%s╭──────────────────────╮\n' "$(color_code cyan)"
@@ -712,7 +715,21 @@ cleanup() {
   sleep 0.3
   exit 0
 }
-trap cleanup TERM INT HUP
+trap 'cleanup signal' TERM INT HUP
+
+# 自检：检查 runtime 文件是否还在 + claude 父进程是否存活
+# 任一缺失就 cleanup 退出。这是中断场景的兜底——即便所有 hook 都没触发
+# kill 信号，close.sh 一旦删除 runtime 文件，下一次自检就会让动画自杀。
+self_check() {
+  if [[ -n "$RUNTIME_FILE" && ! -f "$RUNTIME_FILE" ]]; then
+    cleanup "runtime-gone"
+  fi
+  if [[ -n "$CLAUDE_PID" && "$CLAUDE_PID" != "0" ]]; then
+    if ! kill -0 "$CLAUDE_PID" 2>/dev/null; then
+      cleanup "claude-dead"
+    fi
+  fi
+}
 
 # 进入 alt screen + 隐藏光标
 printf '%s%s' "$ALT_SCREEN_ON" "$HIDE_CURSOR"
@@ -743,6 +760,11 @@ while :; do
       now=$SECONDS
       if (( now - LAST_FLUSH >= FLUSH_INTERVAL )); then
         flush_stats "$now"
+      fi
+
+      # 自检：每 SELF_CHECK_INTERVAL 帧检查一次（任务中断 / claude 死掉 → 自杀）
+      if (( FRAME_IDX % SELF_CHECK_INTERVAL == 0 )); then
+        self_check
       fi
     done
 
