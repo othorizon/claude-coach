@@ -208,17 +208,143 @@ make_line() {
 }
 
 # ═══════════════════════════════════════════════════════
-# Claude 教练角色
+# 像素画教练角色（粉色小章鱼）
+# 用半块字符 ▀ + 24-bit RGB 把终端当像素屏：每个字符格 2 个像素（上下半）
 # ═══════════════════════════════════════════════════════
-coach_pose_lines() {
-  local idx="$1"
-  case $((idx % 4)) in
-    0) printf '%s\n' '     ✻' '   ╭───╮' '   │◕ ◕│' '   │ ▽ │' '   ╰─┬─╯' '    │ \';;
-    1) printf '%s\n' '     ✻' '   ╭───╮' '   │^ ^│' '   │ ◡ │' '   ╰─┬─╯' '   /│';;
-    2) printf '%s\n' '   ✻ ✻' '   ╭───╮' '   │◕ ◕│' '   │ ▽ │' '   ╰─┬─╯' '    │\\';;
-    3) printf '%s\n' '   ✻' '   ╭───╮' '   │- -│' '   │ ◡ │' '   ╰─┬─╯' '    │/';;
+
+# 像素颜色映射（字符 → "R;G;B"，空 = 透明）
+sprite_color_for() {
+  case "$1" in
+    p) echo "196;86;86" ;;       # 深粉（轮廓）
+    P) echo "231;122;122" ;;     # 浅粉（主体）
+    E) echo "40;40;40" ;;        # 眼睛（深色）
+    e) echo "100;55;55" ;;       # 半闭眼/睫毛
+    h) echo "255;255;255" ;;     # 眼神高光
+    *) echo "" ;;                 # 透明
   esac
 }
+
+# 把上下两行像素 + 起始列 → 渲染成 ANSI 字符串（一行半块字符）
+build_sprite_row() {
+  local upper="$1" lower="$2"
+  local w=${#upper}
+  local out=""
+  local c uc lc ucol lcol
+  for ((c=0; c<w; c++)); do
+    uc="${upper:$c:1}"
+    lc="${lower:$c:1}"
+    ucol=$(sprite_color_for "$uc")
+    lcol=$(sprite_color_for "$lc")
+    if [[ -z "$ucol" && -z "$lcol" ]]; then
+      out+=" "
+    elif [[ -z "$lcol" ]]; then
+      out+="${ESC}[38;2;${ucol}m${ESC}[49m▀"
+    elif [[ -z "$ucol" ]]; then
+      out+="${ESC}[39m${ESC}[48;2;${lcol}m▀"
+    else
+      out+="${ESC}[38;2;${ucol}m${ESC}[48;2;${lcol}m▀"
+    fi
+  done
+  out+="${ESC}[0m"
+  printf '%s' "$out"
+}
+
+# 把多行像素数据 → 7 个变量 SPRITE_<name>_row0..6（启动时预算一次）
+build_sprite() {
+  local pose="$1" data="$2"
+  local IFS=$'\n'
+  local rows=($data)
+  unset IFS
+  local i out_idx=0 upper lower row
+  for ((i=0; i<${#rows[@]}; i+=2)); do
+    upper="${rows[$i]}"
+    lower="${rows[$((i+1))]:-..............}"
+    row=$(build_sprite_row "$upper" "$lower")
+    printf -v "SPRITE_${pose}_row${out_idx}" '%s' "$row"
+    out_idx=$((out_idx + 1))
+  done
+}
+
+# 在指定位置渲染整个 sprite（写入 FRAME_BUF）
+render_sprite_pose() {
+  local pose="$1" base_row="$2" base_col="$3"
+  local i pos var_name
+  for i in 0 1 2 3 4 5 6; do
+    var_name="SPRITE_${pose}_row${i}"
+    [[ -z "${!var_name-}" ]] && continue
+    printf -v pos '%s[%d;%dH' "$ESC" "$((base_row + i))" "$base_col"
+    FRAME_BUF+="$pos${!var_name}"
+  done
+}
+
+# 四个姿势的像素数据（14 宽 × 14 高 = 渲染为 14 字符 × 7 行）
+# . = 透明  p = 深粉  P = 浅粉  E = 眼睛  e = 闭眼睫毛  h = 高光
+POSE_FORWARD='..............
+....pppppp....
+...pPPPPPPp...
+..pPPPPPPPPp..
+.pPPPPPPPPPPp.
+.pPPEEPPEEPPp.
+.pPPEhPPEhPPp.
+.pPPPPPPPPPPp.
+.pPPPPPPPPPPp.
+.pPPPPPPPPPPp.
+..pPPPPPPPPp..
+...pp.pp.pp...
+...p..p..p....
+...p..p..p....'
+
+POSE_BLINK='..............
+....pppppp....
+...pPPPPPPp...
+..pPPPPPPPPp..
+.pPPPPPPPPPPp.
+.pPPPPPPPPPPp.
+.pPPeePPeePPp.
+.pPPPPPPPPPPp.
+.pPPPPPPPPPPp.
+.pPPPPPPPPPPp.
+..pPPPPPPPPp..
+...pp.pp.pp...
+...p..p..p....
+...p..p..p....'
+
+POSE_RIGHT='..............
+....pppppp....
+...pPPPPPPp...
+..pPPPPPPPPp..
+.pPPPPPPPPPPp.
+.pPPPEEPPEEPp.
+.pPPPEhPPEhPp.
+.pPPPPPPPPPPp.
+.pPPPPPPPPPPp.
+.pPPPPPPPPPPp.
+..pPPPPPPPPp..
+...pp.pp.pp...
+...p..p..p....
+...p..p..p....'
+
+POSE_SMILE='..............
+....pppppp....
+...pPPPPPPp...
+..pPPPPPPPPp..
+.pPPeePPeePPp.
+.pPPPPPPPPPPp.
+.pPPPPPPPPPPp.
+.pPPPPPPPPPPp.
+.pPPPeeeePPPp.
+.pPPPPPPPPPPp.
+..pPPPPPPPPp..
+...pp.pp.pp...
+...p..p..p....
+...p..p..p....'
+
+build_sprite forward "$POSE_FORWARD"
+build_sprite blink   "$POSE_BLINK"
+build_sprite right   "$POSE_RIGHT"
+build_sprite smile   "$POSE_SMILE"
+
+POSE_NAMES=(forward blink right smile)
 
 coach_line_for() {
   local action="$1" frame="$2"
@@ -238,25 +364,23 @@ coach_line_for() {
 
 draw_coach() {
   local start_col="$1" start_row="$2" action="$3" frame="$4"
-  local pose_idx=$(( frame / 8 ))
-  local line line_text
-  local row=$start_row
 
-  while IFS= read -r line; do
-    buf_at "$row" "$start_col" "byellow" "$line"
-    row=$((row + 1))
-  done < <(coach_pose_lines "$pose_idx")
+  # 像素角色：4 个姿势按帧轮换（每姿势约 1.6 秒 = 8 帧）
+  local pose_idx=$(( (frame / 8) % ${#POSE_NAMES[@]} ))
+  local pose="${POSE_NAMES[$pose_idx]}"
+  render_sprite_pose "$pose" "$start_row" "$start_col"
 
+  # 语音泡泡：在角色右侧（角色 14 列 + 2 列间隙 = 起始列 +16）
+  local line_text
   line_text=$(coach_line_for "$action" "$((frame / 12))")
-
-  local b_row=$((start_row + 1))
+  local b_row=$((start_row + 2))
   local b_col=$((start_col + 16))
   buf_at "$b_row"          "$b_col" "bcyan" "╭──────────────╮"
   buf_at $((b_row + 1))    "$b_col" "bcyan" "│"
   buf_at $((b_row + 1))    "$((b_col + 2))" "bcyan" "${BOLD}${line_text}"
   buf_at $((b_row + 1))    "$((b_col + 15))" "bcyan" "│"
-  buf_at $((b_row + 2))    "$b_col" "bcyan" "╰──────┬───────╯"
-  buf_at $((b_row + 3))    "$b_col" "bcyan" "       ▽"
+  buf_at $((b_row + 2))    "$b_col" "bcyan" "╰──┬───────────╯"
+  buf_at $((b_row + 3))    "$b_col" "bcyan" "   ▽"
 }
 
 # ═══════════════════════════════════════════════════════
@@ -647,12 +771,9 @@ render_screen() {
   buf_clear_rows 3 $((lines - 4))
   render_dispatch "$action" 4
 
-  # 教练（足够宽时在右上，否则不画）
-  if (( cols >= 100 )); then
+  # 教练：宽度够才画（避免和主动画区重叠）
+  if (( cols >= 110 )); then
     draw_coach $(( cols - 36 )) 5 "$action" "$FRAME_IDX"
-  elif (( cols >= 80 )); then
-    # 中等宽度：教练放主动画区下方
-    draw_coach 3 $((lines - 11)) "$action" "$FRAME_IDX"
   fi
 
   # 大数字倒计时（仅 cols>=100 && lines>=28 才显示）

@@ -146,7 +146,11 @@ open_popup() {
         if [[ "$term_program" == "iTerm.app" ]]; then
           osascript >/dev/null 2>&1 <<EOF
 tell application "iTerm2"
-  create window with default profile command "/bin/bash -c \"$script_invoke\""
+  set newWin to (create window with default profile command "/bin/bash -c \"$script_invoke\"")
+  tell current session of newWin
+    set columns to 120
+    set rows to 32
+  end tell
 end tell
 EOF
         else
@@ -154,6 +158,9 @@ EOF
 tell application "Terminal"
   activate
   do script "exec /bin/bash -c \"$script_invoke\""
+  delay 0.1
+  set number of columns of front window to 120
+  set number of rows of front window to 32
 end tell
 EOF
         fi
